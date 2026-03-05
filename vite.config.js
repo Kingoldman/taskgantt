@@ -18,4 +18,7 @@ export default defineConfig({
     },
   },
   base: '/taskgantt/',
+  build: {
+    outDir: 'docs'
+  }
 })
