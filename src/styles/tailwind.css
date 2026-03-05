@@ -1,0 +1,181 @@
+@import "tailwindcss";
+
+/* Custom styles for TaskGantt */
+html, body, #app {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+/* Scrollbar styles */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Element Plus overrides for light theme */
+.el-button {
+  font-weight: 500;
+}
+
+.el-dialog__header {
+  margin-right: 0;
+  padding: 20px 24px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.el-dialog__body {
+  padding: 24px;
+}
+
+.el-dialog__footer {
+  padding: 16px 24px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.el-form-item__label {
+  font-weight: 500;
+  color: #475569;
+}
+
+.el-input__wrapper,
+.el-textarea__inner {
+  box-shadow: 0 0 0 1px #e2e8f0 inset;
+}
+
+.el-input__wrapper:hover,
+.el-textarea__inner:hover {
+  box-shadow: 0 0 0 1px #cbd5e1 inset;
+}
+
+.el-input__wrapper.is-focus,
+.el-textarea__inner:focus {
+  box-shadow: 0 0 0 1px #3b82f6 inset;
+}
+
+/* Card hover effects */
+.task-card {
+  transition: all 0.2s ease;
+}
+
+.task-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+}
+
+/* Gantt chart custom styles */
+.gantt-container {
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.gantt-grid {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  min-width: 800px;
+}
+
+.gantt-task-list {
+  border-right: 1px solid #e2e8f0;
+  background: #fff;
+}
+
+.gantt-timeline {
+  overflow-x: auto;
+  position: relative;
+}
+
+.gantt-bar {
+  transition: all 0.2s ease;
+}
+
+.gantt-bar:hover {
+  filter: brightness(0.95);
+}
+
+/* Priority badges - 使用暖色调表示重要性 */
+.priority-high {
+  background-color: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+}
+
+.priority-medium {
+  background-color: #fffbeb;
+  color: #d97706;
+  border: 1px solid #fcd34d;
+}
+
+.priority-low {
+  background-color: #ecfeff;
+  color: #0891b2;
+  border: 1px solid #a5f3fc;
+}
+
+/* Status badges - 使用冷色调表示状态流转 */
+.status-todo {
+  background-color: #f3f4f6;
+  color: #6b7280;
+  border: 1px solid #d1d5db;
+}
+
+.status-inprogress {
+  background-color: #eff6ff;
+  color: #2563eb;
+  border: 1px solid #bfdbfe;
+}
+
+.status-done {
+  background-color: #f0fdf4;
+  color: #16a34a;
+  border: 1px solid #86efac;
+}
+
+/* Drag and drop styles */
+.sortable-ghost {
+  opacity: 0.4;
+  background: #f1f5f9;
+}
+
+.sortable-drag {
+  cursor: grabbing;
+}
+
+/* Animation */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.2s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
+.slide-enter-active,
+.slide-leave-active {
+  transition: all 0.3s ease;
+}
+
+.slide-enter-from {
+  opacity: 0;
+  transform: translateX(-20px);
+}
+
+.slide-leave-to {
+  opacity: 0;
+  transform: translateX(20px);
+}
