@@ -7,6 +7,7 @@ import {
   useDateLogic,
   useStatusLinkage,
   useTaskTree,
+  useTimeBoundaryCheck,
 } from '@/composables/task-form/index.js'
 
 const props = defineProps({
@@ -66,6 +67,11 @@ const {
   availableDependencyTasks,
   hasChildren
 } = useTaskTree(props)
+
+const {
+  collectTimeChanges,
+  generateConfirmContent
+} = useTimeBoundaryCheck(computed(() => props.allTasks))
 
 // 对话框标题
 const dialogTitle = computed(() => {
@@ -166,90 +172,64 @@ async function handleSave() {
   try {
     await formRef.value.validate()
 
-    // 再次验证逻辑关系
     const startDate = formData.value.startDate
     const endDate = formData.value.endDate
     const status = formData.value.status
 
-    // 无开始日期的任务只能设置为待办
     if (!startDate && status !== TaskStatus.TODO) {
       ElMessage.error('未设置开始日期的任务只能设置为"待办"')
       return
     }
 
-    // 开始日期在今天之后的任务只能设置为待办
     if (isDateAfterToday(startDate) && status !== TaskStatus.TODO) {
       ElMessage.error('开始日期在今天之后的任务只能设置为"待办"')
       return
     }
 
-    // 结束日期在今天之后的任务不能设置为已完成
     if (status === TaskStatus.DONE && isDateAfterToday(endDate)) {
       ElMessage.error('结束日期在今天之后的任务不能设置为"已完成"')
       return
     }
 
-    // 如果状态改为已完成，自动设置进度为100%
     const data = { ...formData.value }
     if (data.status === TaskStatus.DONE && data.progress < 100) {
       data.progress = 100
     }
 
-    // 检查时间边界变化的影响（仅对没有子任务的任务检查）
+    const tasksToUpdate = []
+
     if (!hasChildren.value) {
-      const timeChangeMessages = []
+      const changes = collectTimeChanges(
+        startDate,
+        endDate,
+        props.task?.id,
+        data.dependencies
+      )
 
-      // 检查是否会影响父任务时间
-      if (data.parentId) {
-        const parentTask = props.allTasks.find(t => t.id === data.parentId)
-        if (parentTask) {
-          const siblings = props.allTasks.filter(t => t.parentId === data.parentId && t.id !== props.task?.id)
-          const allStartDates = siblings.map(s => new Date(s.startDate).getTime())
-          const allEndDates = siblings.map(s => new Date(s.endDate).getTime())
+      if (changes.length > 0) {
+        const content = generateConfirmContent(changes)
 
-          if (startDate) allStartDates.push(new Date(startDate).getTime())
-          if (endDate) allEndDates.push(new Date(endDate).getTime())
-
-          if (allStartDates.length > 0 && allEndDates.length > 0) {
-            const newMinStart = new Date(Math.min(...allStartDates))
-            const newMaxEnd = new Date(Math.max(...allEndDates))
-
-            if (newMinStart < new Date(parentTask.startDate) || newMaxEnd > new Date(parentTask.endDate)) {
-              timeChangeMessages.push(`父任务"${parentTask.title}"的时间范围将自动调整为覆盖所有子任务`)
-            }
-          }
-        }
-      }
-
-      // 检查子任务时间是否超出父任务
-      if (props.task?.parentId) {
-        const parentTask = props.allTasks.find(t => t.id === props.task.parentId)
-        if (parentTask) {
-          if (startDate && new Date(startDate) < new Date(parentTask.startDate)) {
-            timeChangeMessages.push(`开始时间早于父任务"${parentTask.title}"的开始时间，父任务时间将自动调整`)
-          }
-          if (endDate && new Date(endDate) > new Date(parentTask.endDate)) {
-            timeChangeMessages.push(`结束时间晚于父任务"${parentTask.title}"的结束时间，父任务时间将自动调整`)
-          }
-        }
-      }
-
-      // 如果有时间边界变化，显示确认弹窗
-      if (timeChangeMessages.length > 0) {
         try {
-          await ElMessageBox.confirm(
-            `检测到以下时间边界变化：\n${timeChangeMessages.map((m, i) => `${i + 1}. ${m}`).join('\n')}\n\n是否继续保存？`,
-            '时间边界变化提示',
-            {
-              confirmButtonText: '确认保存',
-              cancelButtonText: '取消',
-              type: 'warning'
-            }
-          )
+          await ElMessageBox.confirm(content, '时间边界变化提示', {
+            confirmButtonText: '确认保存',
+            cancelButtonText: '取消',
+            customClass: 'time-change-message-box'
+          })
+
+          for (const change of changes) {
+            tasksToUpdate.push({
+              taskId: change.taskId,
+              updates: change.updates
+            })
+          }
         } catch {
           return
         }
       }
+    }
+
+    if (tasksToUpdate.length > 0) {
+      data._additionalUpdates = tasksToUpdate
     }
 
     emit('save', data)
@@ -258,6 +238,13 @@ async function handleSave() {
   } catch (error) {
     console.error('Form validation failed:', error)
   }
+}
+
+function formatDate(date) {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
 }
 </script>
 
@@ -418,7 +405,7 @@ async function handleSave() {
           class="w-full"
           :render-after-expand="false"
         />
-        <div class="text-xs mt-1" style="color: #E6A23C;">前置任务完成后，此任务才能开始</div>
+        <div class="text-xs mt-1" style="color: #E6A23C;">前置任务开始后，此任务才能开始</div>
       </el-form-item>
 
       <el-form-item label="牵头领导" prop="leader" required>
@@ -460,5 +447,146 @@ async function handleSave() {
 
 :deep(.el-date-editor.el-input) {
   width: 100%;
+}
+</style>
+
+<style>
+.time-change-content {
+  padding: 8px 0;
+}
+
+.time-change-content .change-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #ebeef5;
+}
+
+.time-change-content .header-icon {
+  width: 24px;
+  height: 24px;
+  color: #E6A23C;
+}
+
+.time-change-content .change-header span {
+  font-size: 15px;
+  font-weight: 600;
+  color: #303133;
+}
+
+.time-change-content .change-body {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.time-change-content .change-section {
+  margin-bottom: 20px;
+}
+
+.time-change-content .change-section:last-child {
+  margin-bottom: 0;
+}
+
+.time-change-content .change-section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 14px;
+  color: #409EFF;
+  margin-bottom: 12px;
+  padding: 6px 12px;
+  background: linear-gradient(90deg, rgba(64, 158, 255, 0.1) 0%, transparent 100%);
+  border-radius: 4px;
+}
+
+.time-change-content .change-section-title.parent-title {
+  color: #67C23A;
+  background: linear-gradient(90deg, rgba(103, 194, 58, 0.1) 0%, transparent 100%);
+}
+
+.time-change-content .section-icon {
+  width: 16px;
+  height: 16px;
+}
+
+.time-change-content .change-item {
+  background: #fafafa;
+  padding: 12px 14px;
+  margin-bottom: 8px;
+  border-radius: 6px;
+  border: 1px solid #f0f0f0;
+  transition: all 0.2s;
+}
+
+.time-change-content .change-item:hover {
+  background: #f5f7fa;
+  border-color: #e4e7ed;
+}
+
+.time-change-content .change-item:last-child {
+  margin-bottom: 0;
+}
+
+.time-change-content .change-task-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 500;
+  font-size: 14px;
+  color: #303133;
+  margin-bottom: 8px;
+}
+
+.time-change-content .task-icon {
+  font-size: 14px;
+}
+
+.time-change-content .change-detail {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #606266;
+  padding-left: 20px;
+}
+
+.time-change-content .change-label {
+  color: #909399;
+  min-width: 60px;
+}
+
+.time-change-content .change-old {
+  color: #909399;
+  text-decoration: line-through;
+  background: #f5f5f5;
+  padding: 2px 6px;
+  border-radius: 3px;
+}
+
+.time-change-content .change-arrow {
+  color: #E6A23C;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+.time-change-content .change-new {
+  color: #67C23A;
+  font-weight: 600;
+  background: rgba(103, 194, 58, 0.1);
+  padding: 2px 6px;
+  border-radius: 3px;
+}
+</style>
+
+<style>
+.time-change-message-box :deep(.el-message-box__icon) {
+  display: none;
+}
+
+.time-change-message-box :deep(.el-message-box__message) {
+  padding-left: 0;
 }
 </style>

@@ -160,17 +160,33 @@ function handleEditTask(task) {
 
 // 处理保存任务
 function handleSaveTask(taskData) {
+  const additionalUpdates = taskData._additionalUpdates
+  delete taskData._additionalUpdates
+
   if (editingTask.value && editingTask.value.id) {
-    // 编辑现有任务
     taskStore.updateTask(editingTask.value.id, taskData)
   } else {
-    // 新建任务（包括子任务）
     taskStore.addTask(taskData)
   }
-  // 更新父任务的时间范围
+
   if (taskData.parentId) {
     taskStore.updateParentTaskTime(taskData.parentId)
   }
+
+  if (additionalUpdates && additionalUpdates.length > 0) {
+    const processedIds = new Set()
+    additionalUpdates.forEach(update => {
+      if (!processedIds.has(update.taskId)) {
+        taskStore.updateTask(update.taskId, update.updates)
+        processedIds.add(update.taskId)
+        const task = taskStore.allTasks.find(t => t.id === update.taskId)
+        if (task?.parentId) {
+          taskStore.updateParentTaskTime(task.parentId)
+        }
+      }
+    })
+  }
+
   editingTask.value = null
 }
 

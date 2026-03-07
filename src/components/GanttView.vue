@@ -121,7 +121,7 @@ const {
 const {
   getDependencyLine,
   getDependencyTitle,
-  isDependencyCompleted,
+  isDependencyStarted,
 } = useDependencyLines(organizedTasks, getTaskBarStyle, COLORS)
 
 const {
@@ -736,8 +736,8 @@ defineExpose({
                                 <div class="flex flex-col">
                                   <span v-for="depId in task.dependencies" :key="depId" class="text-xs">
                                     {{ getDependencyTitle(depId, props.tasks) }}
-                                    <span v-if="!isDependencyCompleted(depId, props.tasks)" class="text-orange-400">(未完成)</span>
-                                    <span v-else class="text-green-400">(已完成)</span>
+                                    <span v-if="!isDependencyStarted(depId, props.tasks)" class="text-orange-400">(未开始)</span>
+                                    <span v-else class="text-green-400">(已开始)</span>
                                   </span>
                                 </div>
                               </div>

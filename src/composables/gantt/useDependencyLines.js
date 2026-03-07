@@ -24,23 +24,28 @@ export function useDependencyLines(organizedTasks, getTaskBarStyle, COLORS) {
     return { x1, y1, x2, y2 }
   }
 
-  // 检查前置任务是否已完成
-  function checkDependenciesCompleted(task, allTasks) {
+  // 检查前置任务是否已开始
+  function checkDependenciesStarted(task, allTasks) {
     if (!task.dependencies || task.dependencies.length === 0) {
-      return { allCompleted: true, pendingTasks: [] }
+      return { allStarted: true, notStartedTasks: [] }
     }
 
-    const pendingTasks = []
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const notStartedTasks = []
     task.dependencies.forEach((depId) => {
       const depTask = allTasks.find((t) => t.id === depId)
-      if (depTask && depTask.progress < 100) {
-        pendingTasks.push(depTask.title)
+      if (depTask) {
+        const depStartDate = new Date(depTask.startDate)
+        if (depStartDate > today) {
+          notStartedTasks.push(depTask.title)
+        }
       }
     })
 
     return {
-      allCompleted: pendingTasks.length === 0,
-      pendingTasks,
+      allStarted: notStartedTasks.length === 0,
+      notStartedTasks,
     }
   }
 
@@ -50,16 +55,20 @@ export function useDependencyLines(organizedTasks, getTaskBarStyle, COLORS) {
     return depTask ? depTask.title : '未知任务'
   }
 
-  // 检查单个前置任务是否已完成
-  function isDependencyCompleted(depId, allTasks) {
+  // 检查单个前置任务是否已开始
+  function isDependencyStarted(depId, allTasks) {
     const depTask = allTasks.find((t) => t.id === depId)
-    return depTask ? depTask.progress >= 100 : false
+    if (!depTask) return false
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const depStartDate = new Date(depTask.startDate)
+    return depStartDate <= today
   }
 
   return {
     getDependencyLine,
-    checkDependenciesCompleted,
+    checkDependenciesStarted,
     getDependencyTitle,
-    isDependencyCompleted,
+    isDependencyStarted,
   }
 }
