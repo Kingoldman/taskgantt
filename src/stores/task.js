@@ -74,6 +74,63 @@ export const useTaskStore = defineStore('task', () => {
 
   function addTask(taskData) {
     const newTask = createTask(taskData)
+
+    // 处理插入位置
+    if (taskData.insertPosition !== undefined && taskData.insertPosition >= 0) {
+      const siblings = tasks.value
+        .filter(t => t.parentId === taskData.parentId)
+        .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt))
+
+      if (siblings.length === 0) {
+        // 没有同级任务，使用默认 createdAt
+      } else if (taskData.insertPosition === 0) {
+        // 插入到最前面
+        const firstCreatedAt = new Date(siblings[0].createdAt)
+        newTask.createdAt = new Date(firstCreatedAt.getTime() - 1000).toISOString()
+        newTask.updatedAt = newTask.createdAt
+      } else if (taskData.insertPosition >= siblings.length) {
+        // 插入到末尾，使用默认 createdAt（比最后一个任务晚）
+        const lastCreatedAt = new Date(siblings[siblings.length - 1].createdAt)
+        const now = new Date()
+        const newTime = Math.max(now.getTime(), lastCreatedAt.getTime() + 1000)
+        newTask.createdAt = new Date(newTime).toISOString()
+        newTask.updatedAt = newTask.createdAt
+      } else {
+        // 插入到中间
+        const prevTask = siblings[taskData.insertPosition - 1]
+        const nextTask = siblings[taskData.insertPosition]
+
+        const prevTime = new Date(prevTask.createdAt).getTime()
+        const nextTime = new Date(nextTask.createdAt).getTime()
+
+        if (nextTime > prevTime) {
+          // 正常情况：前后时间有差距
+          const midTime = Math.floor((prevTime + nextTime) / 2)
+          newTask.createdAt = new Date(midTime).toISOString()
+        } else {
+          // 异常情况：前后时间相同或倒序，需要重新排列后续任务的时间
+          // 给新任务分配一个时间，并调整后续任务
+          const baseTime = prevTime + 1
+          newTask.createdAt = new Date(baseTime).toISOString()
+
+          // 调整后续任务的时间，确保顺序正确
+          let currentTime = baseTime + 1
+          for (let i = taskData.insertPosition; i < siblings.length; i++) {
+            const siblingIndex = tasks.value.findIndex(t => t.id === siblings[i].id)
+            if (siblingIndex !== -1) {
+              const siblingTime = new Date(tasks.value[siblingIndex].createdAt).getTime()
+              if (siblingTime <= currentTime) {
+                tasks.value[siblingIndex].createdAt = new Date(currentTime).toISOString()
+                tasks.value[siblingIndex].updatedAt = new Date(currentTime).toISOString()
+                currentTime += 1
+              }
+            }
+          }
+        }
+        newTask.updatedAt = newTask.createdAt
+      }
+    }
+
     tasks.value.push(newTask)
     saveToStorage(tasks.value)
     return newTask

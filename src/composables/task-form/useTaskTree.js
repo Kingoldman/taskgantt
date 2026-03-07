@@ -1,6 +1,12 @@
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 
-export function useTaskTree(props) {
+/**
+ * 任务树相关逻辑 Composable
+ * @param {Object} props - 组件 props
+ * @param {Ref<string|null>} selectedParentId - 当前选择的父任务ID（响应式）
+ * @returns {Object} 任务树相关方法和数据
+ */
+export function useTaskTree(props, selectedParentId = null) {
   // 按创建时间排序
   function sortByCreatedAt(a, b) {
     if (a.createdAt && b.createdAt) {
@@ -62,9 +68,56 @@ export function useTaskTree(props) {
     return props.allTasks.some(t => t.parentId === props.task.id)
   })
 
+  // 获取同级子任务列表（用于插入位置选择）
+  // 优先使用 selectedParentId（用户在表单中选择的），否则使用 props.task?.parentId
+  const siblingTasks = computed(() => {
+    // 编辑模式不显示插入位置
+    const currentId = props.task?.id
+    if (currentId) return []
+
+    // 获取父任务ID：优先使用用户选择的，否则使用 props 中的
+    const parentId = selectedParentId?.value !== undefined
+      ? selectedParentId.value
+      : props.task?.parentId
+
+    const siblings = props.allTasks
+      .filter(t => t.parentId === parentId && t.id !== currentId)
+      .sort(sortByCreatedAt)
+
+    return siblings.map((task, index) => ({
+      id: task.id,
+      title: task.title,
+      displayIndex: index + 1
+    }))
+  })
+
+  // 插入位置选项
+  const insertPositionOptions = computed(() => {
+    // 编辑模式不显示
+    if (props.task?.id) return []
+
+    const siblings = siblingTasks.value
+    if (siblings.length === 0) return []
+
+    const options = [
+      { value: 0, label: '插入到最前面' }
+    ]
+
+    siblings.forEach((task, index) => {
+      options.push({
+        value: index + 1,
+        label: `插入到 "${task.title}" 之后`
+      })
+    })
+
+    return options
+  })
+
   return {
     availableParentTasks,
     availableDependencyTasks,
-    hasChildren
+    hasChildren,
+    siblingTasks,
+    insertPositionOptions
   }
 }

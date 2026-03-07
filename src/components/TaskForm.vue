@@ -39,8 +39,12 @@ const formData = ref({
   parentId: null,
   dependencies: [],
   leader: '',
-  department: ''
+  department: '',
+  insertPosition: -1
 })
+
+// 当前选择的父任务ID（用于动态更新插入位置选项）
+const selectedParentId = computed(() => formData.value.parentId)
 
 // 使用 composables
 const {
@@ -65,8 +69,10 @@ const {
 const {
   availableParentTasks,
   availableDependencyTasks,
-  hasChildren
-} = useTaskTree(props)
+  hasChildren,
+  siblingTasks,
+  insertPositionOptions
+} = useTaskTree(props, selectedParentId)
 
 const {
   collectTimeChanges,
@@ -100,7 +106,8 @@ watch(() => props.task, (newTask) => {
         parentId: newTask.parentId || null,
         dependencies: [],
         leader: newTask.leader || '',
-        department: newTask.department || ''
+        department: newTask.department || '',
+        insertPosition: -1
       }
     } else {
       // 编辑现有任务
@@ -115,7 +122,8 @@ watch(() => props.task, (newTask) => {
         parentId: newTask.parentId || null,
         dependencies: newTask.dependencies || [],
         leader: newTask.leader || '',
-        department: newTask.department || ''
+        department: newTask.department || '',
+        insertPosition: -1
       }
     }
   } else {
@@ -152,7 +160,8 @@ function resetForm() {
     parentId: null,
     dependencies: [],
     leader: '',
-    department: ''
+    department: '',
+    insertPosition: -1
   }
   if (formRef.value) {
     formRef.value.resetFields()
@@ -391,6 +400,22 @@ function formatDate(date) {
           :render-after-expand="false"
         />
         <div class="text-xs mt-1" style="color: #E6A23C;">设置为子任务后，将显示在父任务下方</div>
+      </el-form-item>
+
+      <el-form-item v-if="!task?.id && insertPositionOptions.length > 0" label="插入位置">
+        <el-select
+          v-model="formData.insertPosition"
+          class="w-full"
+          placeholder="选择插入位置"
+        >
+          <el-option
+            v-for="option in insertPositionOptions"
+            :key="option.value"
+            :label="option.label"
+            :value="option.value"
+          />
+        </el-select>
+        <div class="text-xs mt-1" style="color: #909399;">默认添加到末尾</div>
       </el-form-item>
 
       <el-form-item label="前置任务">
