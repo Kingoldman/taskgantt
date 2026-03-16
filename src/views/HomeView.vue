@@ -294,8 +294,10 @@ function handleExport() {
   const blob = new Blob([data], { type: 'application/json' })
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
+  const now = new Date()
+  const dateStr = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}${String(now.getSeconds()).padStart(2, '0')}`
   a.href = url
-  a.download = `taskgantt_backup_${new Date().toISOString().split('T')[0]}.json`
+  a.download = `taskgantt_backup_${dateStr}.json`
   a.click()
   URL.revokeObjectURL(url)
   ElMessage.success('数据已导出')

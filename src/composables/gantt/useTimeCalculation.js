@@ -49,16 +49,22 @@ export function useTimeCalculation(props, timeRange, cellWidth, currentScale, ti
     const scale = timeScales.find((s) => s.value === currentScale.value)
     const daysPerCell = scale?.daysPerCell || 7
 
+    let position
     switch (currentScale.value) {
       case 'month':
-        return calculateTodayMonthPosition(today, rangeStart)
+        position = calculateTodayMonthPosition(today, rangeStart)
+        break
       case 'quarter':
-        return calculateTodayQuarterPosition(today, rangeStart)
+        position = calculateTodayQuarterPosition(today, rangeStart)
+        break
       case 'year':
-        return calculateTodayYearPosition(today, rangeStart)
+        position = calculateTodayYearPosition(today, rangeStart)
+        break
       default:
-        return calculateTodayDefaultPosition(today, rangeStart, daysPerCell)
+        position = calculateTodayDefaultPosition(today, rangeStart, daysPerCell)
     }
+    // 对像素值进行取整，确保CSS渲染的一致性
+    return Math.round(position)
   })
 
   // 计算月刻度下的位置
@@ -108,6 +114,54 @@ export function useTimeCalculation(props, timeRange, cellWidth, currentScale, ti
   function calculateDefaultPosition(date, rangeStart, daysPerCell) {
     const daysFromStart = Math.floor((date - rangeStart) / (1000 * 60 * 60 * 24))
     return (daysFromStart / daysPerCell) * cellWidth.value
+  }
+
+  // 计算日/周刻度下结束日期的位置（包含完整一天）
+  function calculateDefaultEndPosition(date, rangeStart, daysPerCell) {
+    const daysFromStart = Math.floor((date - rangeStart) / (1000 * 60 * 60 * 24)) + 1
+    return (daysFromStart / daysPerCell) * cellWidth.value
+  }
+
+  // 计算月刻度下结束日期的位置（包含完整一天）
+  function calculateMonthEndPosition(date, rangeStart) {
+    const monthIndex =
+      (date.getFullYear() - rangeStart.getFullYear()) * 12 +
+      (date.getMonth() - rangeStart.getMonth())
+    const daysInMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate()
+    const dayOffset = date.getDate() / daysInMonth
+    return (monthIndex + dayOffset) * cellWidth.value
+  }
+
+  // 计算季度刻度下结束日期的位置（包含完整一天）
+  function calculateQuarterEndPosition(date, rangeStart) {
+    const quarter = Math.floor(date.getMonth() / 3)
+    const rangeStartQuarter = Math.floor(rangeStart.getMonth() / 3)
+    const quarterIndex =
+      (date.getFullYear() - rangeStart.getFullYear()) * 4 +
+      (quarter - rangeStartQuarter)
+    const quarterStartMonth = quarter * 3
+    const quarterStartDate = new Date(date.getFullYear(), quarterStartMonth, 1)
+    const daysInQuarter =
+      Math.floor(
+        (new Date(date.getFullYear(), quarterStartMonth + 3, 0) - quarterStartDate) / (1000 * 60 * 60 * 24)
+      ) + 1
+    const daysFromQuarterStart = Math.floor(
+      (date - quarterStartDate) / (1000 * 60 * 60 * 24)
+    ) + 1
+    const dayOffset = daysFromQuarterStart / daysInQuarter
+    return (quarterIndex + dayOffset) * cellWidth.value
+  }
+
+  // 计算年刻度下结束日期的位置（包含完整一天）
+  function calculateYearEndPosition(date, rangeStart) {
+    const yearIndex = date.getFullYear() - rangeStart.getFullYear()
+    const yearStartDate = new Date(date.getFullYear(), 0, 1)
+    const daysInYear = getDaysInYear(date.getFullYear())
+    const daysFromYearStart = Math.floor(
+      (date - yearStartDate) / (1000 * 60 * 60 * 24)
+    ) + 1
+    const dayOffset = daysFromYearStart / daysInYear
+    return (yearIndex + dayOffset) * cellWidth.value
   }
 
   // 计算今日线在月刻度下的位置（显示在今日网格的右侧边缘）
@@ -173,32 +227,32 @@ export function useTimeCalculation(props, timeRange, cellWidth, currentScale, ti
     const scale = timeScales.find((s) => s.value === currentScale.value)
     const daysPerCell = scale?.daysPerCell || 7
 
-    let left, width
+    let left, rightEdge
 
     switch (currentScale.value) {
       case 'month':
         left = calculateMonthPosition(taskStart, rangeStart)
-        const rightEdgeMonth = calculateMonthPosition(taskEnd, rangeStart)
-        width = Math.max(10, rightEdgeMonth - left)
+        rightEdge = calculateMonthEndPosition(taskEnd, rangeStart)
         break
       case 'quarter':
         left = calculateQuarterPosition(taskStart, rangeStart)
-        const rightEdgeQuarter = calculateQuarterPosition(taskEnd, rangeStart)
-        width = Math.max(10, rightEdgeQuarter - left)
+        rightEdge = calculateQuarterEndPosition(taskEnd, rangeStart)
         break
       case 'year':
         left = calculateYearPosition(taskStart, rangeStart)
-        const rightEdgeYear = calculateYearPosition(taskEnd, rangeStart)
-        width = Math.max(10, rightEdgeYear - left)
+        rightEdge = calculateYearEndPosition(taskEnd, rangeStart)
         break
       default:
         left = calculateDefaultPosition(taskStart, rangeStart, daysPerCell)
-        const duration = Math.max(
-          1,
-          Math.floor((taskEnd - taskStart) / (1000 * 60 * 60 * 24)) + 1
-        )
-        width = Math.max(20, (duration / daysPerCell) * cellWidth.value)
+        rightEdge = calculateDefaultEndPosition(taskEnd, rangeStart, daysPerCell)
     }
+
+    // 对像素值进行取整，确保CSS渲染的一致性
+    left = Math.round(left)
+    rightEdge = Math.round(rightEdge)
+    
+    let width = rightEdge - left
+    width = Math.max(1, width)
 
     return {
       left: `${Math.max(0, left)}px`,

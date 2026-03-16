@@ -756,7 +756,6 @@ defineExpose({
                           }"
                           :style="{
                             width: '100%',
-                            minWidth: '20px',
                             height: '30px',
                             backgroundColor: '#ffffff',
                             position: 'relative',
@@ -783,9 +782,9 @@ defineExpose({
                             }"
                           />
 
-                          <!-- 百分比数字 -->
+                          <!-- 百分比数字 - 仅当任务条足够宽时显示在条内 -->
                           <div
-                            v-if="task.status !== 'todo'"
+                            v-if="task.status !== 'todo' && parseFloat(getTaskBarStyle(task).width) >= 32"
                             class="absolute inset-0 flex items-center justify-center px-1 z-10"
                           >
                             <span
@@ -803,9 +802,9 @@ defineExpose({
                             </span>
                           </div>
 
-                          <!-- 待办任务显示 -->
+                          <!-- 待办任务显示 - 仅当任务条足够宽时显示 -->
                           <div
-                            v-if="task.status === 'todo'"
+                            v-if="task.status === 'todo' && parseFloat(getTaskBarStyle(task).width) >= 32"
                             class="absolute inset-0 flex items-center justify-center px-1 z-10"
                           >
                             <span
@@ -823,6 +822,12 @@ defineExpose({
                         v-if="showExternalLabels"
                         class="ml-2 text-xs text-gray-600 whitespace-nowrap flex items-center"
                       >
+                        <!-- 窄任务条的百分比/状态显示（放在最前面） -->
+                        <template v-if="parseFloat(getTaskBarStyle(task).width) < 32">
+                          <span v-if="task.status !== 'todo'" class="tabular-nums font-medium">{{ task.progress }}%</span>
+                          <span v-else>待开始</span>
+                          <span class="mx-1.5 text-gray-300">|</span>
+                        </template>
                         <span class="tabular-nums text-gray-600">{{ getTotalDays(task.startDate, task.endDate) }}</span>
                         <span class="text-gray-400">/</span>
                         <span class="tabular-nums text-gray-600">{{ getWorkDays(task.startDate, task.endDate) }}</span>
@@ -1180,7 +1185,6 @@ defineExpose({
 .gantt-bar-container {
   display: flex;
   align-items: center;
-  min-width: 20px;
 }
 
 .gantt-bar-container:hover {
