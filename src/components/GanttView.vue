@@ -820,23 +820,23 @@ defineExpose({
                       <!-- 任务信息（条外显示） -->
                       <div
                         v-if="showExternalLabels"
-                        class="ml-2 text-xs text-gray-600 whitespace-nowrap flex items-center"
+                        class="ml-2 text-xs text-gray-900 whitespace-nowrap flex items-center"
                       >
                         <!-- 窄任务条的百分比/状态显示（放在最前面） -->
                         <template v-if="parseFloat(getTaskBarStyle(task).width) < 32">
                           <span v-if="task.status !== 'todo'" class="tabular-nums font-medium">{{ task.progress }}%</span>
                           <span v-else>待开始</span>
-                          <span class="mx-1.5 text-gray-300">|</span>
+                          <span class="mx-1.5 text-gray-400">|</span>
                         </template>
-                        <span class="tabular-nums text-gray-600">{{ getTotalDays(task.startDate, task.endDate) }}</span>
+                        <span class="tabular-nums">{{ getTotalDays(task.startDate, task.endDate) }}</span>
                         <span class="text-gray-400">/</span>
-                        <span class="tabular-nums text-gray-600">{{ getWorkDays(task.startDate, task.endDate) }}</span>
-                        <span class="mx-1.5 text-gray-300">|</span>
-                        <span class="text-gray-800 truncate max-w-[100px]" :title="task.title">{{ task.title }}</span>
-                        <span class="mx-1.5 text-gray-300">|</span>
-                        <span class="text-gray-600 truncate max-w-[50px]">{{ task.leader || '未分配' }}</span>
-                        <span class="mx-1.5 text-gray-300">|</span>
-                        <span class="text-gray-600 truncate max-w-[70px]">{{ task.department || '未指定' }}</span>
+                        <span class="tabular-nums">{{ getWorkDays(task.startDate, task.endDate) }}</span>
+                        <span class="mx-1.5 text-gray-400">|</span>
+                        <span class="truncate max-w-[100px]" :title="task.title">{{ task.title }}</span>
+                        <span class="mx-1.5 text-gray-400">|</span>
+                        <span class="truncate max-w-[50px]">{{ task.leader || '未分配' }}</span>
+                        <span class="mx-1.5 text-gray-400">|</span>
+                        <span class="truncate max-w-[70px]">{{ task.department || '未指定' }}</span>
                       </div>
                     </div>
                   </div>
